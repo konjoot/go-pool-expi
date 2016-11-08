@@ -1,71 +1,114 @@
 package main
 
 import (
-	"github.com/antonikonovalov/nn/drive/pool/each"
-	"github.com/antonikonovalov/nn/drive/pool/oneof"
+	// "./each"
+	// "./hybrid"
+	// "./oneof"
+	"runtime"
 	"sync"
 	"time"
 )
 
 func main() {
 	t := time.Now()
-	for i := 0; i < 1000; i++ {
-		func() int {
-			return i
-		}()
-	}
-	println(`SPEED ITER 1000 i:`, time.Since(t).String())
-	t = time.Now()
-	epool := each.MakePool(1000)
-	println(`UP EACH 1000 procs:`, time.Since(t).String())
-
 	wg := &sync.WaitGroup{}
-	wg.Add(1000)
-	tp := time.Now()
-	for i := 0; i < 1000; i++ {
-		epool.Go(func() int {
-			defer wg.Done()
-			return i
-		})
+	wg.Add(320000000)
+	for i := 0; i < 320000000; i++ {
+		func() {
+			wg.Done()
+		}()
 	}
 	wg.Wait()
-	println(`PROC EACH 1000 tasks:`, time.Since(tp).String())
+	println(`SPEED ITER (ALL) 320000000 i:`, time.Since(t).String())
+
+	// t = time.Now()
+	// wgb := &sync.WaitGroup{}
+	// wgb.Add(320000000)
+	// for i := 0; i < 320000000; i++ {
+	// 	go func() {
+	// 		wgb.Done()
+	// 	}()
+	// }
+	// wgb.Wait()
+	// println(`NATIVE MIX (ALL) 320000000 tasks:`, time.Since(t).String())
+
+	// t = time.Now()
+	// wgc := &sync.WaitGroup{}
+	// wgc.Add(320000000)
+	// for i := 0; i < 320000000; i++ {
+	// 	go wgc.Done()
+	// }
+	// wgc.Wait()
+	// println(`NATIVE MIX 2 (ALL) 320000000 tasks:`, time.Since(t).String())
+
+	// t = time.Now()
+	// epool := each.MakePool(320000000)
+	// println(`EACH (START) 320000000 procs:`, time.Since(t).String())
+
+	// wg := &sync.WaitGroup{}
+	// wg.Add(320000000)
+	// tp := time.Now()
+	// for i := 0; i < 320000000; i++ {
+	// 	epool.Go(func() int {
+	// 		defer wg.Done()
+	// 		return i
+	// 	})
+	// }
+	// wg.Wait()
+	// println(`EACH (PROC) 320000000 tasks:`, time.Since(tp).String())
+
+	// t = time.Now()
+	// epool.Stop()
+	// println(`EACH (STOP) 320000000 procs:`, time.Since(t).String())
+
+	// //-------------------------------------------------------
+
+	// t = time.Now()
+	// opool := oneof.MakePool(320000000)
+	// println(`ONEOF (START) 320000000 procs:`, time.Since(t).String())
+
+	// wgo := &sync.WaitGroup{}
+	// wgo.Add(320000000)
+	// tpo := time.Now()
+	// for i := 0; i < 320000000; i++ {
+	// 	opool.Go(func() int {
+	// 		defer wgo.Done()
+	// 		return i
+	// 	})
+	// }
+	// wgo.Wait()
+	// println(`ONEOF (PROC) 320000000 tasks:`, time.Since(tpo).String())
+
+	// t = time.Now()
+	// opool.Stop()
+	// println(`ONEOF (STOP) 320000000 procs:`, time.Since(t).String())
 
 	t = time.Now()
-	epool.Stop()
-	println(`DOWN EACH 1000 procs:`, time.Since(t).String())
 
-	//-------------------------------------------------------
+	wgh := &sync.WaitGroup{}
 
-	t = time.Now()
-	opool := oneof.MakePool(1000)
-	println(`UP ONEOF 1000 procs:`, time.Since(t).String())
+	num := runtime.NumCPU() * 8
 
-	wgo := &sync.WaitGroup{}
-	wgo.Add(1000)
-	tpo := time.Now()
-	for i := 0; i < 1000; i++ {
-		opool.Go(func() int {
-			defer wgo.Done()
-			return i
-		})
-	}
-	wgo.Wait()
-	println(`PROC ONEOF 1000 tasks:`, time.Since(tpo).String())
+	wgh.Add(320000000)
 
-	t = time.Now()
-	opool.Stop()
-	println(`DOWN ONEOF 1000 procs:`, time.Since(t).String())
+	for i := 0; i < num; i++ {
 
-	wgb := &sync.WaitGroup{}
-	wgb.Add(1000)
-	tpb := time.Now()
-	for i := 0; i < 1000; i++ {
-		go func() int {
-			defer wgb.Done()
-			return i
+		ch := make(chan struct{}, num)
+
+		go func() {
+			for range ch {
+				wgh.Done()
+			}
 		}()
+
+		go func() {
+			for i := 0; i < 320000000; i = i + num {
+				ch <- struct{}{}
+			}
+		}()
+
 	}
-	wgb.Wait()
-	println(`NATIVE MIX  - UP/DOWN/PROC 1000 tasks:`, time.Since(tpb).String())
+	wgh.Wait()
+
+	println(`HYBRID (PROC) 320000000 procs:`, time.Since(t).String())
 }
